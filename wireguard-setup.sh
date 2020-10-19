@@ -12,6 +12,7 @@ peer_name="<PEER NAME>"
 peer_ip="<PEER IP>"
 server_ip="<SERVER NAME>"
 server_port="<SSH PORT>"
+current_directory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 
 ## text output colors
@@ -29,7 +30,7 @@ read -p ""${read_question}"Do you want to restart wireguard? This will temporari
 if [[ "${var1}" == "y" ]]
 then
 	echo -e ""${text_yes}"Restarting wireguard..."${text_reset}""
-	wg-quick down wg0
+	$(wg-quick down wg0 || :)
     wg-quick up wg0
 elif [[ "${var1}" == "n" ]]
 then
@@ -48,7 +49,8 @@ then
 fi
 
 
-# TODO: confirm existing wireguard installation & setup
+# TODO: check if system is running on some kind of debian
+# TODO: confirm existing wireguard installation & setup & link to installation guide: https://www.wireguard.com/install/
 
 
 # get server information
@@ -65,20 +67,22 @@ read -p ""${read_question}"Enter peer name (for key naming): "${read_reset}"" pe
 
 # generate keys
 echo ""
-echo -e ""${text_info}"Generating peer keys..."${text_reset}""
+echo -e ""${text_info}"Generating peer keys in '"${current_directory}"/wireguard'..."${text_reset}""
 # if wireguard folder in home directory doesnt exist, create it
-if [[ ! -d "./wireguard" ]]
+if [[ ! -d ""${current_directory}"/wireguard" ]]
 then
-	mkdir ./wireguard
+	mkdir "${current_directory}"/wireguard
 fi
-cd wireguard
+cd "${current_directory}"/wireguard
 wg genkey | tee peer_"${peer_name}"_private.key | wg pubkey > peer_"${peer_name}"_public.key
 wg genpsk > peer_"${peer_name}"_preshared.key
-sudo chown root:root -f *.key
-sudo chmod 770 -f *.key
+chown root:root -f *.key
+chmod 770 -f *.key
 
 
 # append server config
+echo ""
+echo -e ""${text_info}"Adding new peer to server config..."${text_reset}""
 echo "
 # peer_"${peer_name}":
 [Peer]
@@ -92,10 +96,12 @@ echo ""
 _var1func
 
 
+# TODO: ask which 'AllowedIPs' to use: 0.0.0.0/0, 192.168.11.0/24, custom
+
+
 # print peer config
 echo ""
 echo -e ""${text_info}"Use the following configuration for your new peer:"${text_reset}""
-echo ""
 echo "[Interface]
 Address = "${peer_ip}"/24
 Privatekey = "$(cat peer_"${peer_name}"_private.key)"
