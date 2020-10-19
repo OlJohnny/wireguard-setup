@@ -61,7 +61,7 @@ read -p ""${read_question}"Enter server Wireguard port: "${read_reset}"" server_
 
 # get peer information
 echo ""
-read -p ""${read_question}"Enter peer IP (local Wireguard network): "${read_reset}"" peer_ip
+read -p ""${read_question}"Enter peer IP (local Wireguard network; only last byte: 192.168.11.xxx): "${read_reset}"" peer_ip
 read -p ""${read_question}"Enter peer name (for key naming): "${read_reset}"" peer_name
 
 
@@ -74,8 +74,8 @@ then
 	mkdir "${current_directory}"/wireguard
 fi
 cd "${current_directory}"/wireguard
-wg genkey | tee peer_"${peer_name}"_private.key | wg pubkey > peer_"${peer_name}"_public.key
-wg genpsk > peer_"${peer_name}"_preshared.key
+wg genkey | tee peer_"${peer_ip}"_private.key | wg pubkey > peer_"${peer_ip}"_public.key
+wg genpsk > peer_"${peer_ip}"_preshared.key
 chown root:root -f *.key
 chmod 770 -f *.key
 
@@ -86,9 +86,9 @@ echo -e ""${text_info}"Adding new peer to server config..."${text_reset}""
 echo "
 # peer_"${peer_name}":
 [Peer]
-PublicKey = "$(cat peer_"${peer_name}"_public.key)"
-PresharedKey = "$(cat peer_"${peer_name}"_preshared.key)"
-AllowedIPs = "${peer_ip}"/32" >> /etc/wireguard/wg0.conf
+PublicKey = "$(cat peer_"${peer_ip}"_public.key)"
+PresharedKey = "$(cat peer_"${peer_ip}"_preshared.key)"
+AllowedIPs = 192.168.11."${peer_ip}"/32" >> /etc/wireguard/wg0.conf
 
 
 # ask to restart wireguard
@@ -103,13 +103,12 @@ _var1func
 echo ""
 echo -e ""${text_info}"Use the following configuration for your new peer:"${text_reset}""
 echo "[Interface]
-Address = "${peer_ip}"/24
-Privatekey = "$(cat peer_"${peer_name}"_private.key)"
-DNS = 8.8.8.8
+Address = 192.168.11."${peer_ip}"/24
+Privatekey = "$(cat peer_"${peer_ip}"_private.key)"
 
 [Peer]
 PublicKey = "$(cat server_public.key)"
-PresharedKey = "$(cat peer_"${peer_name}"_preshared.key)"
+PresharedKey = "$(cat peer_"${peer_ip}"_preshared.key)"
 AllowedIPs = 192.168.11.0/24
 PersistentKeepalive = 30
 Endpoint = "${server_ip}":"${server_port}""
