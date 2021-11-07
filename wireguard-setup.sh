@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
-# github.com/OlJohnny | 2020
+# github.com/OlJohnny | 2021
+set -e            # exit immediately if a command exits with a non-zero status
+set -u            # treat unset variables as an error when substituting
+set -o pipefail   # return value of pipeline is status of last command to exit with a non-zero status
+# set -o xtrace   # uncomment the previous statement for debugging
 
-set -o errexit
-set -o pipefail
-set -o nounset
-# set -o xtrace		# uncomment the previous statement for debugging
+# environment
+SCRIPT_FULL=$(realpath -s $0)     # stackoverflow.com/a/11114547
+SCRIPT_PATH=$(dirname $(realpath -s $0))
+SCRIPT_NAME=$(basename $(realpath -s $0))
 
-
-## global variables
-peer_name="<PEER NAME>"
-peer_ip="<PEER IP>"
-server_ip="<SERVER NAME>"
-server_port="<SSH PORT>"
-current_directory="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-
-## text output colors
+# text colors
 text_info="\e[96m"
 text_yes="\e[92m"
 text_no="\e[91m"
@@ -23,6 +18,28 @@ text_reset="\e[0m"
 read_question=$'\e[93m'
 read_reset=$'\e[0m'
 
+# check for root privileges
+if [[ "${EUID}" -ne 0 ]]
+then
+    echo -e ""${text_no}"Please run as root."${text_reset}""
+    echo -e "Exiting..."
+    exit 1
+fi
+
+# check if instance of script is already running, stackoverflow.com/a/45429634
+if ps ax | grep ${SCRIPT_NAME} | grep --invert-match $$ | grep bash | grep --invert-match grep > /dev/null
+then
+    echo -e ""${text_no}"Another instance of this script is already running."${text_reset}""
+    echo -e "Exiting..."
+    exit 1
+fi
+
+
+## global variables
+peer_name="<PEER NAME>"
+peer_ip="<PEER IP>"
+server_ip="<SERVER NAME>"
+server_port="<SSH PORT>"
 
 # loop question: restart wireguard
 _var1func(){
@@ -39,14 +56,6 @@ else
 	_var1func
 fi
 }
-
-
-## check for root privilges
-if [[ "${EUID}" != 0 ]]
-then
-	echo -e ""${text_no}"Please run as root. Root privileges are needed to create and modify configurations/files"${text_reset}""
-	exit
-fi
 
 
 # TODO: check if system is running on some kind of debian
@@ -67,13 +76,13 @@ read -p ""${read_question}"Enter peer name (for key naming): "${read_reset}"" pe
 
 # generate keys
 echo ""
-echo -e ""${text_info}"Generating peer keys in '"${current_directory}"/wireguard'..."${text_reset}""
+echo -e ""${text_info}"Generating peer keys in '"${SCRIPT_PATH}"/wireguard'..."${text_reset}""
 # if wireguard folder in home directory doesnt exist, create it
-if [[ ! -d ""${current_directory}"/wireguard" ]]
+if [[ ! -d ""${SCRIPT_PATH}"/wireguard" ]]
 then
-	mkdir "${current_directory}"/wireguard
+	mkdir "${SCRIPT_PATH}"/wireguard
 fi
-cd "${current_directory}"/wireguard
+cd "${SCRIPT_PATH}"/wireguard
 wg genkey | tee peer_"${peer_ip}"_private.key | wg pubkey > peer_"${peer_ip}"_public.key
 wg genpsk > peer_"${peer_ip}"_preshared.key
 chown root:root -f *.key
