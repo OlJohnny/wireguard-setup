@@ -145,6 +145,21 @@ else
 fi
 }
 
+# loop question: enable wireguard tunnel at startup
+_var6func(){
+read -p ""${read_question}"Do you want to enable the wireguard tunnel "${server_interface}" at startup? (y|n): "${read_reset}"" var6
+if [[ "${var6}" == "y" ]]
+then
+	echo -e ""${text_yes}"Enabling "${server_interface}" at startup..."${text_reset}""
+	systemctl enable wg-quick@"${server_interface}"
+elif [[ "${var6}" == "n" ]]
+then
+	echo -e ""${text_no}"Not enabling "${server_interface}" at startup."${text_reset}""
+else
+	_var6func
+fi
+}
+
 
 # TODO: check if system is running on some kind of debian
 
@@ -192,11 +207,13 @@ then
 fi
 
 
-# check for existing wireguard config
+# check for existing wireguard config, if not ask to generate one and ask to enable wireguard tunnel at startup
 if [[ ! -f "/etc/wireguard/"${server_interface}".conf" ]]
 then
     echo ""
     _var5func
+    echo ""
+    _var6func
 fi
 
 
