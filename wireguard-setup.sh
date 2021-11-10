@@ -42,6 +42,7 @@ server_subnet="<SERVER SUBNET>"
 server_ip="<SERVER IP>"
 server_port="<SERVER PORT>"
 server_interface="<SERVER INTERFACE>"
+allowed_ips="<ALLOWED IPS DEFAULT>"
 
 
 # loop question: restart wireguard
@@ -117,7 +118,31 @@ else
 	_var4func
 fi
 }
+
+# loop question: build initial server config
+_var5func(){
+read -p ""${read_question}"Couldn't find a server config for interface "${server_interface}". Do you want to generate a new config at '/etc/wireguard/"${server_interface}".conf'? (y|n): "${read_reset}"" var5
+if [[ "${var5}" == "y" ]]
+then
+    ip -br a
+    read -p "\n"${read_question}"Enter the network interface over which the wireguard server should be reached (e.g. eth0): "${read_reset}"" server5_interface
+    read -p ""${read_question}"Enter the network address & range the server should be reachable at in the wireguard network (e.g. 192.168.11.1/24): "${read_reset}"" server5_address
+	echo -e ""${text_info}"Generating new server config..."${text_reset}""
+	echo "[Interface]
+Address = "${server5_address}"
+SaveConfig = false
+PostUp = iptables -A FORWARD -i "${server_interface}" -j ACCEPT; iptables -A FORWARD -o "${server_interface}" -j ACCEPT; iptables -t nat -A POSTROUTING -o "${server5_interface}" -j MASQUERADE
+PostDown = iptables -D FORWARD -i "${server_interface}" -j ACCEPT; iptables -D FORWARD -o "${server_interface}" -j ACCEPT; iptables -t nat -D POSTROUTING -o "${server5_interface}" -j MASQUERADE
+ListenPort = "${server_port}"
+PrivateKey = "$(cat server_"${server_interface}"_private.key)"" > /etc/wireguard/"${server_interface}".conf
+elif [[ "${var5}" == "n" ]]
+then
+	echo -e ""${text_no}"Not generating a new server config."${text_reset}""
+else
+	_var5func
+fi
 }
+
 
 # TODO: check if system is running on some kind of debian
 
@@ -156,6 +181,7 @@ then
 fi
 cd "${SCRIPT_PATH}"/wireguard-keys
 
+
 # check for existing server keys
 if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_preshared.key" ]]
 then
@@ -163,9 +189,17 @@ then
     _var2func
 fi
 
+
+# check for existing wireguard config
+if [[ ! -f "/etc/wireguard/"${server_interface}".conf" ]]
+then
+    echo ""
+    _var5func
+fi
+
+
 # generate peer keys
 echo -e "\n"${text_info}"Generating Peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
-
 # touch key files and update permissions to prevent a warning message by wireguard
 touch peer_"${server_interface}"_"${peer_name}"_private.key
 touch peer_"${server_interface}"_"${peer_name}"_public.key
