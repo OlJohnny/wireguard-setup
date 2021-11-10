@@ -62,8 +62,21 @@ fi
 
 
 # TODO: check if system is running on some kind of debian
-# TODO: confirm existing wireguard installation & setup & link to installation guide: https://www.wireguard.com/install/
 
+
+# check if wireguard is installed
+if [[ $(dpkg-query --show --showformat='${Status}' wireguard 2>/dev/null | grep --count "ok installed") == 0 ]];
+then
+	echo -e ""${text_no}"Package 'wireguard' needs to be installed"${text_reset}""
+    exit
+fi
+
+# check if wireguard-tools is installed
+if [[ $(dpkg-query --show --showformat='${Status}' wireguard-tools 2>/dev/null | grep --count "ok installed") == 0 ]];
+then
+	echo -e ""${text_no}"Package 'wireguard-tools' needs to be installed"${text_reset}""
+    exit
+fi
 
 # get server information
 echo ""
