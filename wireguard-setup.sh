@@ -117,6 +117,7 @@ then
     exit
 fi
 
+
 # get server information
 echo ""
 read -p ""${read_question}"Enter Server IP/Domain: "${read_reset}"" server_ip
@@ -124,27 +125,29 @@ read -p ""${read_question}"Enter Server Wireguard Port: "${read_reset}"" server_
 read -p ""${read_question}"Enter Server Wireguard Interface (eg. wg0): "${read_reset}"" server_interface
 read -p ""${read_question}"Enter Server Wireguard Subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
 
-
 # get peer information
 echo ""
 read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
 read -p ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
 
 
-# check for existing server keys
-if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_preshared.key" ]]
-then
-    _var2func
-fi
-
-# generate peer keys
-echo -e "\n"${text_info}"Generating Peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
 # if wireguard folder in home directory doesnt exist, create it
 if [[ ! -d ""${SCRIPT_PATH}"/wireguard-keys" ]]
 then
 	mkdir "${SCRIPT_PATH}"/wireguard-keys
 fi
 cd "${SCRIPT_PATH}"/wireguard-keys
+
+# check for existing server keys
+if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_preshared.key" ]]
+then
+    echo ""
+    _var2func
+fi
+
+# generate peer keys
+echo -e "\n"${text_info}"Generating Peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
+
 # touch key files and update permissions to prevent a warning message by wireguard
 touch peer_"${server_interface}"_"${peer_name}"_private.key
 touch peer_"${server_interface}"_"${peer_name}"_public.key
@@ -156,7 +159,6 @@ wg genkey | tee peer_"${server_interface}"_"${peer_name}"_private.key | wg pubke
 wg genpsk > peer_"${server_interface}"_"${peer_name}"_preshared.key
 
 
-
 # append server config
 echo -e "\n"${text_info}"Adding new peer to server config..."${text_reset}""
 echo "
@@ -165,6 +167,7 @@ echo "
 PublicKey = "$(cat peer_"${server_interface}"_"${peer_name}"_public.key)"
 PresharedKey = "$(cat peer_"${server_interface}"_"${peer_name}"_preshared.key)"
 AllowedIPs = "${peer_ip}"/32" >> /etc/wireguard/"${server_interface}".conf
+chmod 770 /etc/wireguard/"${server_interface}".conf
 
 
 # ask to restart wireguard
@@ -182,7 +185,7 @@ Address = "${peer_ip}"/24
 Privatekey = "$(cat peer_"${server_interface}"_"${peer_name}"_private.key)"\n
 
 [Peer]
-PublicKey = "$(cat server_"{$server_interface}"_public.key)"
+PublicKey = "$(cat server_"${$server_interface}"_public.key)"
 PresharedKey = "$(cat peer_"${server_interface}"_"${peer_name}"_preshared.key)"
 AllowedIPs = "${server_subnet}"
 PersistentKeepalive = 30
