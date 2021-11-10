@@ -82,6 +82,23 @@ else
 fi
 }
 
+# loop question: delete local copies of peer keys
+_var3func(){
+read -p ""${read_question}"Do you want to delete local copies of peer key files? They are no longer needed if you have copied the peer config from above. (y|n): "${read_reset}"" var3
+if [[ "${var3}" == "y" ]]
+then
+	echo -e ""${text_yes}"Deleting local copies of peer key files..."${text_reset}""
+	rm peer_"${server_interface}"_"${peer_name}"_private.key
+    rm peer_"${server_interface}"_"${peer_name}"_public.key
+    rm peer_"${server_interface}"_"${peer_name}"_preshared.key
+elif [[ "${var3}" == "n" ]]
+then
+	echo -e ""${text_no}"Not deleting local copies of peer key files."${text_reset}""
+else
+	_var3func
+fi
+}
+
 
 # TODO: check if system is running on some kind of debian
 
@@ -172,5 +189,8 @@ PersistentKeepalive = 30
 Endpoint = "${server_ip}":"${server_port}""
 echo -e "\n"${text_info}"Tip: You can provide this config as a file to clients by pasting it into '"${peer_name}".conf'"${text_reset}""
 
-## exiting
+# ask to delete local copies of peer keys
+_var3func
+
+# exiting
 echo -e "\n"${text_info}"Finished\nExiting..."${text_reset}""
