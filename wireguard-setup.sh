@@ -36,18 +36,18 @@ fi
 
 
 ## global variables
-peer_name="<PEER NAME>"
-peer_ip="<PEER IP>"
-server_subnet="<SERVER SUBNET>"
-server_ip="<SERVER IP>"
-server_port="<SERVER PORT>"
-server_interface="<SERVER INTERFACE>"
+peer_name="<PEER NAME DEFAULT>"
+peer_ip="<PEER IP DEFAULT>"
+server_subnet="<SERVER SUBNET DEFAULT>"
+server_ip="<SERVER IP DEFAULT>"
+server_port="<SERVER PORT DEFAULT>"
+server_interface="<SERVER INTERFACE DEFAULT>"
 allowed_ips="<ALLOWED IPS DEFAULT>"
 
 
 # loop question: restart wireguard
 _var1func(){
-read -p ""${read_question}"Do you want to restart wireguard? This will temporarily disconnect all wg connections (y|n): "${read_reset}"" var1
+read -p ""${read_question}"Do you want to restart wireguard? This will temporarily disconnect all wireguard connections (y|n): "${read_reset}"" var1
 if [[ "${var1}" == "y" ]]
 then
 	echo -e ""${text_yes}"Restarting wireguard..."${text_reset}""
@@ -102,7 +102,8 @@ fi
 
 # loop question: AllowedIPs
 _var4func(){
-read -p ""${read_question}"Which (peer) IP range should be routed through the wireguard tunnel:\n 0: 0.0.0.0/0 (Route all traffic through wireguard)\n 1: "${server_subnet}" (Route local traffic through wireguard)\n c: Enter a custom subnet"${read_reset}"\n" var4
+echo -e ""${read_question}"Which (peer) IP range should be routed through the wireguard tunnel:\n 0: 0.0.0.0/0 (Route all traffic through wireguard)\n 1: "${server_subnet}" (Route local traffic through wireguard)\n c: Enter a custom subnet"${read_reset}""
+read -p "" var4
 if [[ "${var4}" == "0" ]]
 then
 	echo -e ""${text_yes}"Setting 0.0.0.0/0 as AllowedIPs..."${text_reset}""
@@ -125,7 +126,8 @@ read -p ""${read_question}"Couldn't find a server config for interface "${server
 if [[ "${var5}" == "y" ]]
 then
     ip -br a
-    read -p "\n"${read_question}"Enter the network interface over which the wireguard server should be reached (e.g. eth0): "${read_reset}"" server5_interface
+    echo ""
+    read -p ""${read_question}"Enter the network interface over which the wireguard server should connect to the internet (e.g. eth0): "${read_reset}"" server5_interface
     read -p ""${read_question}"Enter the network address & range the server should be reachable at in the wireguard network (e.g. 192.168.11.1/24): "${read_reset}"" server5_address
 	echo -e ""${text_info}"Generating new server config..."${text_reset}""
 	echo "[Interface]
@@ -170,8 +172,8 @@ read -p ""${read_question}"Enter Server Wireguard Interface (eg. wg0): "${read_r
 read -p ""${read_question}"Enter Server Wireguard Subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
 # get peer information
 echo ""
-read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
 read -p ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
+read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
 
 
 # if wireguard folder in home directory doesnt exist, create it
