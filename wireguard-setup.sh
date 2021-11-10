@@ -41,7 +41,7 @@ peer_ip="<PEER IP>"
 server_subnet="<SERVER SUBNET>"
 server_ip="<SERVER IP>"
 server_port="<SERVER PORT>"
-server_interface"<SERVER INTERFACE>"
+server_interface="<SERVER INTERFACE>"
 
 
 # loop question: restart wireguard
@@ -50,8 +50,8 @@ read -p ""${read_question}"Do you want to restart wireguard? This will temporari
 if [[ "${var1}" == "y" ]]
 then
 	echo -e ""${text_yes}"Restarting wireguard..."${text_reset}""
-	$(wg-quick down wg0 || :)
-    wg-quick up wg0
+	$(wg-quick down "${server_interface}" || :)
+    wg-quick up "${server_interface}"
 elif [[ "${var1}" == "n" ]]
 then
 	echo -e ""${text_no}"Not restarting wireguard"${text_reset}""
@@ -80,30 +80,38 @@ fi
 
 # get server information
 echo ""
-read -p ""${read_question}"Enter server IP/Domain: "${read_reset}"" server_ip
-read -p ""${read_question}"Enter server Wireguard port: "${read_reset}"" server_port
-read -p ""${read_question}"Enter server wireguard interface (eg. wg0): "${read_reset}"" server_interface
-read -p ""${read_question}"Enter wireguard subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
+read -p ""${read_question}"Enter Server IP/Domain: "${read_reset}"" server_ip
+read -p ""${read_question}"Enter Server Wireguard Port: "${read_reset}"" server_port
+read -p ""${read_question}"Enter Server Wireguard Interface (eg. wg0): "${read_reset}"" server_interface
+read -p ""${read_question}"Enter Server Wireguard Subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
 
 
 # get peer information
 echo ""
-read -p ""${read_question}"Enter peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
-read -p ""${read_question}"Enter peer name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
+read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
+read -p ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
 
 
-# generate keys
-echo -e "\n"${text_info}"Generating peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
+# 
+
+# generate peer keys
+echo -e "\n"${text_info}"Generating Peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
 # if wireguard folder in home directory doesnt exist, create it
 if [[ ! -d ""${SCRIPT_PATH}"/wireguard-keys" ]]
 then
 	mkdir "${SCRIPT_PATH}"/wireguard-keys
 fi
 cd "${SCRIPT_PATH}"/wireguard-keys
-wg genkey | tee peer_"${server_interface}"_"${peer_name}"_private.key | wg pubkey > peer_"${server_interface}"_"${peer_name}"_public.key
-wg genpsk > peer_"${server_interface}"_"${peer_name}"_preshared.key
+# touch key files and update permissions to prevent a warning message by wireguard
+touch peer_"${server_interface}"_"${peer_name}"_private.key
+touch peer_"${server_interface}"_"${peer_name}"_public.key
+touch peer_"${server_interface}"_"${peer_name}"_preshared.key
 chown root:root -f *.key
 chmod 770 -f *.key
+# generate peer keys
+wg genkey | tee peer_"${server_interface}"_"${peer_name}"_private.key | wg pubkey > peer_"${server_interface}"_"${peer_name}"_public.key
+wg genpsk > peer_"${server_interface}"_"${peer_name}"_preshared.key
+
 
 
 # append server config
@@ -136,7 +144,7 @@ PresharedKey = "$(cat peer_"${server_interface}"_"${peer_name}"_preshared.key)"
 AllowedIPs = "${server_subnet}"
 PersistentKeepalive = 30
 Endpoint = "${server_ip}":"${server_port}""
-
+echo -e "\n"${text_info}"Tip: You can provide this config as a file to clients by pasting it into '"${peer_name}".conf'"${text_reset}""
 
 ## exiting
 echo -e "\n"${text_info}"Finished\nExiting..."${text_reset}""
