@@ -99,6 +99,25 @@ else
 fi
 }
 
+# loop question: AllowedIPs
+_var4func(){
+read -p ""${read_question}"Which (peer) IP range should be routed through the wireguard tunnel:\n 0: 0.0.0.0/0 (Route all traffic through wireguard)\n 1: "${server_subnet}" (Route local traffic through wireguard)\n c: Enter a custom subnet"${read_reset}"\n" var4
+if [[ "${var4}" == "0" ]]
+then
+	echo -e ""${text_yes}"Setting 0.0.0.0/0 as AllowedIPs..."${text_reset}""
+	allowed_ips="0.0.0.0/0"
+elif [[ "${var4}" == "1" ]]
+then
+	echo -e ""${text_yes}"Setting "${server_subnet}" as AllowedIPs..."${text_reset}""
+    allowed_ips="${server_subnet}"
+elif [[ "${var4}" == "c" ]]
+then
+    read -p ""${read_question}"Enter IP range for wireguard routing (e.g. 192.168.50.0/24): "${read_reset}"" allowed_ips
+else
+	_var4func
+fi
+}
+}
 
 # TODO: check if system is running on some kind of debian
 
@@ -124,7 +143,6 @@ read -p ""${read_question}"Enter Server IP/Domain: "${read_reset}"" server_ip
 read -p ""${read_question}"Enter Server Wireguard Port: "${read_reset}"" server_port
 read -p ""${read_question}"Enter Server Wireguard Interface (eg. wg0): "${read_reset}"" server_interface
 read -p ""${read_question}"Enter Server Wireguard Subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
-
 # get peer information
 echo ""
 read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
@@ -170,12 +188,14 @@ AllowedIPs = "${peer_ip}"/32" >> /etc/wireguard/"${server_interface}".conf
 chmod 770 /etc/wireguard/"${server_interface}".conf
 
 
+# ask which 'AllowedIPs' to use
+echo ""
+_var4func
+
+
 # ask to restart wireguard
 echo ""
 _var1func
-
-
-# TODO: ask which 'AllowedIPs' to use: 0.0.0.0/0, 192.168.11.0/24, custom
 
 
 # print peer config
@@ -185,14 +205,15 @@ Address = "${peer_ip}"/24
 Privatekey = "$(cat peer_"${server_interface}"_"${peer_name}"_private.key)"\n
 
 [Peer]
-PublicKey = "$(cat server_"${$server_interface}"_public.key)"
+PublicKey = "$(cat server_"${server_interface}"_public.key)"
 PresharedKey = "$(cat peer_"${server_interface}"_"${peer_name}"_preshared.key)"
-AllowedIPs = "${server_subnet}"
+AllowedIPs = "${allowed_ips}"
 PersistentKeepalive = 30
 Endpoint = "${server_ip}":"${server_port}""
 echo -e "\n"${text_info}"Tip: You can provide this config as a file to clients by pasting it into '"${peer_name}".conf'"${text_reset}""
 
 # ask to delete local copies of peer keys
+echo ""
 _var3func
 
 # exiting
