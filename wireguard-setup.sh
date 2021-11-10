@@ -60,6 +60,28 @@ else
 fi
 }
 
+# loop question: generate server keys
+_var2func(){
+read -p ""${read_question}"Couldn't find any server keys. Do you want to generate new ones? (They will NOT get updated in any pre existing config files) (y|n): "${read_reset}"" var2
+if [[ "${var2}" == "y" ]]
+then
+	echo -e ""${text_yes}"Generating server keys..."${text_reset}""
+	touch server_"${server_interface}"_private.key
+    touch server_"${server_interface}"_public.key
+    touch server_"${server_interface}"_preshared.key
+    chown root:root -f *.key
+    chmod 770 -f *.key
+    # generate peer keys
+    wg genkey | tee server_"${server_interface}"_private.key | wg pubkey > server_"${server_interface}"_public.key
+    wg genpsk > server_"${server_interface}"_preshared.key
+elif [[ "${var2}" == "n" ]]
+then
+	echo -e ""${text_no}"Not generating server keys.\nAs we can't find any server keys, exiting ..."${text_reset}""
+else
+	_var2func
+fi
+}
+
 
 # TODO: check if system is running on some kind of debian
 
@@ -92,7 +114,11 @@ read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11
 read -p ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
 
 
-# 
+# check for existing server keys
+if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_preshared.key" ]]
+then
+    _var2func
+fi
 
 # generate peer keys
 echo -e "\n"${text_info}"Generating Peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
