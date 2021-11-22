@@ -255,7 +255,7 @@ _var1func
 echo -e "\n"${text_info}"Use the following configuration for your new peer:"${text_reset}""
 echo "[Interface]
 Address = "${peer_ip}"/24
-Privatekey = "$(cat peer_"${server_interface}"_"${peer_name}"_private.key)"\n
+Privatekey = "$(cat peer_"${server_interface}"_"${peer_name}"_private.key)"
 
 [Peer]
 PublicKey = "$(cat server_"${server_interface}"_public.key)"
