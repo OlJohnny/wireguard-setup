@@ -160,6 +160,26 @@ else
 fi
 }
 
+# loop question: show qr code of config
+_var7func(){
+read -p ""${read_question}"Do you want to generate a qr code for your client config? (y|n): "${read_reset}"" var7
+if [[ "${var7}" == "y" ]]
+then
+	# check if qrencode is installed
+    if [[ $(dpkg-query --show --showformat='${Status}' qrencode 2>/dev/null | grep --count "ok installed") == 0 ]];
+    then
+        echo -e ""${text_no}"Package 'qrencode' needs to be installed"${text_reset}""
+    else
+        qrencode -t ansiutf8 "$(echo "${CONFIG}")"
+    fi
+elif [[ "${var7}" == "n" ]]
+then
+	echo -en ""
+else
+	_var7func
+fi
+}
+
 
 # TODO: check if system is running on some kind of debian
 
@@ -190,6 +210,8 @@ echo ""
 read -p ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
 read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
 
+# TODO: check if ip is already in use
+
 
 # if wireguard folder in home directory doesnt exist, create it
 if [[ ! -d ""${SCRIPT_PATH}"/wireguard-keys" ]]
@@ -200,7 +222,7 @@ cd "${SCRIPT_PATH}"/wireguard-keys
 
 
 # check for existing server keys
-if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_preshared.key" ]]
+if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]]
 then
     echo ""
     _var2func
@@ -252,8 +274,7 @@ _var1func
 
 
 # print peer config
-echo -e "\n"${text_info}"Use the following configuration for your new peer:"${text_reset}""
-echo "[Interface]
+CONFIG="$(echo "[Interface]
 Address = "${peer_ip}"/24
 Privatekey = "$(cat peer_"${server_interface}"_"${peer_name}"_private.key)"
 
@@ -262,8 +283,14 @@ PublicKey = "$(cat server_"${server_interface}"_public.key)"
 PresharedKey = "$(cat peer_"${server_interface}"_"${peer_name}"_preshared.key)"
 AllowedIPs = "${allowed_ips}"
 PersistentKeepalive = 30
-Endpoint = "${server_ip}":"${server_port}""
+Endpoint = "${server_ip}":"${server_port}"")"
+
+echo -e "\n"${text_info}"Use the following configuration for your new peer:"${text_reset}""
+echo "${CONFIG}"
 echo -e "\n"${text_info}"Tip: You can provide this config as a file to clients by pasting it into '"${peer_name}".conf'"${text_reset}""
+
+# ask to generate qr code for client config
+_var7func
 
 # ask to delete local copies of peer keys
 echo ""
