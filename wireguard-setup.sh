@@ -200,8 +200,7 @@ cd "${SCRIPT_PATH}"/wireguard-keys
 
 
 # check for existing server keys
-if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_private.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]] || [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_preshared.key" ]]
-then
+if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.key" ]]; then
     echo ""
     _var2func
 fi
@@ -256,6 +255,7 @@ echo -e "\n"${text_info}"Use the following configuration for your new peer:"${te
 echo "[Interface]
 Address = "${peer_ip}"/24
 Privatekey = "$(cat peer_"${server_interface}"_"${peer_name}"_private.key)"
+MTU = 1384
 
 [Peer]
 PublicKey = "$(cat server_"${server_interface}"_public.key)"
