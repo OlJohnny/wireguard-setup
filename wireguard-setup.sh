@@ -47,7 +47,7 @@ allowed_ips="<ALLOWED IPS DEFAULT>"
 
 # loop question: restart wireguard
 _var1func(){
-read -p ""${read_question}"Do you want to restart wireguard? This will temporarily disconnect all wireguard connections (y|n): "${read_reset}"" var1
+read -ep ""${read_question}"Do you want to restart wireguard? This will temporarily disconnect all wireguard connections (y|n): "${read_reset}"" var1
 if [[ "${var1}" == "y" ]]
 then
 	echo -e ""${text_yes}"Restarting wireguard..."${text_reset}""
@@ -63,7 +63,7 @@ fi
 
 # loop question: generate server keys
 _var2func(){
-read -p ""${read_question}"Couldn't find any server keys. Do you want to generate new ones? (They will NOT get updated in any pre existing config files) (y|n): "${read_reset}"" var2
+read -ep ""${read_question}"Couldn't find any server keys. Do you want to generate new ones? (They will NOT get updated in any pre existing config files) (y|n): "${read_reset}"" var2
 if [[ "${var2}" == "y" ]]
 then
 	echo -e ""${text_yes}"Generating server keys..."${text_reset}""
@@ -85,7 +85,7 @@ fi
 
 # loop question: delete local copies of peer keys
 _var3func(){
-read -p ""${read_question}"Do you want to delete local copies of peer key files? They are no longer needed if you have copied the peer config from above. (y|n): "${read_reset}"" var3
+read -ep ""${read_question}"Do you want to delete local copies of peer key files? They are no longer needed if you have copied the peer config from above. (y|n): "${read_reset}"" var3
 if [[ "${var3}" == "y" ]]
 then
 	echo -e ""${text_yes}"Deleting local copies of peer key files..."${text_reset}""
@@ -103,7 +103,7 @@ fi
 # loop question: AllowedIPs
 _var4func(){
 echo -e ""${read_question}"Which (peer) IP range should be routed through the wireguard tunnel:\n 0: 0.0.0.0/0 (Route all traffic through wireguard)\n 1: "${server_subnet}" (Route local traffic through wireguard)\n c: Enter a custom subnet"${read_reset}""
-read -p "" var4
+read -ep "" var4
 if [[ "${var4}" == "0" ]]
 then
 	echo -e ""${text_yes}"Setting 0.0.0.0/0 as AllowedIPs..."${text_reset}""
@@ -122,7 +122,7 @@ fi
 
 # loop question: build initial server config
 _var5func(){
-read -p ""${read_question}"Couldn't find a server config for interface "${server_interface}". Do you want to generate a new config at '/etc/wireguard/"${server_interface}".conf'? (y|n): "${read_reset}"" var5
+read -ep ""${read_question}"Couldn't find a server config for interface "${server_interface}". Do you want to generate a new config at '/etc/wireguard/"${server_interface}".conf'? (y|n): "${read_reset}"" var5
 if [[ "${var5}" == "y" ]]
 then
     ip -br a
@@ -147,7 +147,7 @@ fi
 
 # loop question: enable wireguard tunnel at startup
 _var6func(){
-read -p ""${read_question}"Do you want to enable the wireguard tunnel "${server_interface}" at startup? (y|n): "${read_reset}"" var6
+read -ep ""${read_question}"Do you want to enable the wireguard tunnel "${server_interface}" at startup? (y|n): "${read_reset}"" var6
 if [[ "${var6}" == "y" ]]
 then
 	echo -e ""${text_yes}"Enabling "${server_interface}" at startup..."${text_reset}""
@@ -160,16 +160,7 @@ else
 fi
 }
 
-
 # TODO: check if system is running on some kind of debian
-
-
-# check if wireguard is installed
-if [[ $(dpkg-query --show --showformat='${Status}' wireguard 2>/dev/null | grep --count "ok installed") == 0 ]];
-then
-	echo -e ""${text_no}"Package 'wireguard' needs to be installed"${text_reset}""
-    exit
-fi
 
 # check if wireguard-tools is installed
 if [[ $(dpkg-query --show --showformat='${Status}' wireguard-tools 2>/dev/null | grep --count "ok installed") == 0 ]];
@@ -178,20 +169,43 @@ then
     exit
 fi
 
-
 # get server information
-echo ""
-read -p ""${read_question}"Enter Server IP/Domain: "${read_reset}"" server_ip
-read -p ""${read_question}"Enter Server Wireguard Port: "${read_reset}"" server_port
-read -p ""${read_question}"Enter Server Wireguard Interface (eg. wg0): "${read_reset}"" server_interface
-read -p ""${read_question}"Enter Server Wireguard Subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
+
+# ask which wireguard config to use
+path_to_use="/etc/wireguard"
+no_of_files=$(ls -1 "${path_to_use}" | grep -E \.conf$ | wc -l)
+echo -en "${text_info}"
+ls -1 "${path_to_use}" | grep -E \.conf$ | awk '{print NR  ": " $s}'
+echo -en "${text_reset}"
+
+# loop question
+_var112func(){
+    read -i "1" -ep ""${read_question}"Which config to use. Enter the line number: "${read_reset}"" var112
+    if [[ -n "${var112}" ]]; then
+        server_interface=$(ls -1 "${path_to_use}" | grep -E \.conf$ | sed "${var112}q;d" | sed 's|\.conf||g' )
+    else
+        _var112func
+    fi
+}
+
+_var112func
+
+server_port_d=$(grep "ListenPort" /etc/wireguard/"${server_interface}".conf | awk '{print $3}')
+
+read -ep ""${read_question}"Enter Server IP/Domain: "${read_reset}"" server_ip
+read -i "${server_port_d}" -ep ""${read_question}"Enter Server Wireguard Port: "${read_reset}"" server_port
+read -ep ""${read_question}"Enter Server Wireguard Subnet (as CIDR, eg. 192.168.11.0/24): "${read_reset}"" server_subnet
 # get peer information
 echo ""
-read -p ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
-read -p ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
+read -ep ""${read_question}"Enter Peer Name (for key naming, no spaces & '/'): "${read_reset}"" peer_name
+echo ""
+echo -en "${text_info}"
+grep "AllowedIPs" /etc/wireguard/"${server_interface}".conf | grep -oE "[0-9]{,3}\.[0-9]{,3}\.[0-9]{,3}\.[0-9]{,3}" | sort -t. -n +3.0
+echo -en "${text_reset}"
+read -ep ""${read_question}"Enter Peer IP (local Wireguard network, eg 192.168.11.5): "${read_reset}"" peer_ip
 
 
-# if wireguard folder in home directory doesnt exist, create it
+# if wireguard folder doesnt exist, create it
 if [[ ! -d ""${SCRIPT_PATH}"/wireguard-keys" ]]
 then
 	mkdir "${SCRIPT_PATH}"/wireguard-keys
@@ -205,7 +219,6 @@ if [[ ! -f ""${SCRIPT_PATH}"/wireguard-keys/server_"${server_interface}"_public.
     _var2func
 fi
 
-
 # check for existing wireguard config, if not ask to generate one and ask to enable wireguard tunnel at startup
 if [[ ! -f "/etc/wireguard/"${server_interface}".conf" ]]
 then
@@ -214,7 +227,6 @@ then
     echo ""
     _var6func
 fi
-
 
 # generate peer keys
 echo -e "\n"${text_info}"Generating Peer keys in '"${SCRIPT_PATH}"/wireguard-keys'..."${text_reset}""
